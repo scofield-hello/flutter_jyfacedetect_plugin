@@ -2,6 +2,8 @@ package com.chuangdun.flutter.plugin.JyFaceDetect
 
 import android.content.Context
 import android.graphics.Bitmap
+import android.media.MediaDataSource
+import android.media.MediaPlayer
 import android.os.Handler
 import android.util.Log
 import android.view.TextureView
@@ -19,6 +21,7 @@ import io.flutter.plugin.common.MethodCall
 import io.flutter.plugin.common.MethodChannel
 import io.flutter.plugin.platform.PlatformView
 import java.io.ByteArrayOutputStream
+import java.lang.Exception
 import java.util.concurrent.LinkedBlockingQueue
 import java.util.concurrent.ThreadPoolExecutor
 import java.util.concurrent.TimeUnit
@@ -48,6 +51,7 @@ class JyFaceDetectView(private val context: Context, messenger: BinaryMessenger,
     private var eventSink: EventChannel.EventSink? = null
     private val mCamera: JYCamera
     private var mDetectStart = false
+    private var mMediaPlayer:MediaPlayer? = null
     init {
         val width = createParams["width"] as Int
         val height = createParams["height"] as Int
@@ -137,11 +141,12 @@ class JyFaceDetectView(private val context: Context, messenger: BinaryMessenger,
             ))
         }
         val detectTask = Runnable {
+            playSound(R.raw.start_detect_face, 4000)
             while (mDetectStart){
                 try {
-                    Thread.sleep(1000)
+                    Thread.sleep(500)
                 }catch (e: InterruptedException){
-                    Log.e(TAG, "线程睡眠1000毫秒失败.")
+                    Log.e(TAG, "线程睡眠500毫秒失败.")
                 }
                 val bitmap = mCamera.takePicture()
                 val faceList: Array<out CMIdsFace> = mAliveDetect.detectFace(bitmap, null)
@@ -155,6 +160,7 @@ class JyFaceDetectView(private val context: Context, messenger: BinaryMessenger,
                                 "yaw_angle:${faceList[0].yaw_angle}")
                         if (faceList[0].isRightAngle()){
                             mDetectStart = false
+                            playSound(R.raw.face_detected, 1500)
                             val outputStream = ByteArrayOutputStream()
                             bitmap.compress(Bitmap.CompressFormat.PNG, 100, outputStream)
                             uiHandler.post {
@@ -181,6 +187,20 @@ class JyFaceDetectView(private val context: Context, messenger: BinaryMessenger,
             }
         }
         threadPool.execute(detectTask)
+    }
+
+    private fun playSound(resid:Int, waitMillis:Long){
+        try {
+            mMediaPlayer = MediaPlayer.create(context, resid)
+            mMediaPlayer!!.start()
+            Thread.sleep(waitMillis)
+            mMediaPlayer!!.stop()
+            mMediaPlayer!!.release()
+        }catch (e: InterruptedException){
+            Log.e(TAG, "线程睡眠waitMillis毫秒失败.${e.message}")
+        }catch (e: Exception) {
+            Log.e(TAG, "MediaPlayer错误.${e.message}")
+        }
     }
 
     override fun getView(): View {
