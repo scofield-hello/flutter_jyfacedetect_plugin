@@ -11,8 +11,8 @@ class JyFaceDetectViewParams {
   final int previewWidth;
   final int previewHeight;
   const JyFaceDetectViewParams(
-      {this.width = 352,
-      this.height = 288,
+      {this.width = 240,
+      this.height = 320,
       this.rotate = 0,
       this.previewWidth = 640,
       this.previewHeight = 480});
@@ -82,6 +82,14 @@ class JyDetectSdkInitResult {
   const JyDetectSdkInitResult(this.result, this.msg);
 }
 
+class JyFaceDetectPreviewFrame{
+  final int height;
+  final int width;
+  final Uint8List yuvData;
+  const JyFaceDetectPreviewFrame(this.yuvData, this.width, this.height);
+}
+
+
 class JyFaceDetectEventType {
   static const EVENT_CAMERA_OPENED = 0;
   static const EVENT_PREVIEW = 1;
@@ -104,7 +112,7 @@ class JyFaceDetectViewController {
         _onCameraOpened.add(null);
         break;
       case JyFaceDetectEventType.EVENT_PREVIEW:
-        _onPreview.add(null);
+        _onPreview.add(JyFaceDetectPreviewFrame(event['yuvData'], event['width'], event['height']));
         break;
       case JyFaceDetectEventType.EVENT_PREVIEW_STOP:
         _onPreviewStop.add(null);
@@ -143,10 +151,10 @@ class JyFaceDetectViewController {
   ///相机打开时触发.
   Stream<void> get onCameraOpened => _onCameraOpened.stream;
 
-  final _onPreview = StreamController<void>.broadcast();
+  final _onPreview = StreamController<JyFaceDetectPreviewFrame>.broadcast();
 
   ///每一帧预览画面都会触发.
-  Stream<void> get onPreview => _onPreview.stream;
+  Stream<JyFaceDetectPreviewFrame> get onPreview => _onPreview.stream;
 
   final _onPreviewStop = StreamController<void>.broadcast();
 
