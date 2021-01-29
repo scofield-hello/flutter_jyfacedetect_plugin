@@ -1,0 +1,13 @@
+<manifest xmlns:android="http://schemas.android.com/apk/res/android"
+  package="com.chuangdun.flutter.plugin.JyFaceDetect">
+  <!--摄像头相关权限-->
+  <uses-permission android:name="android.permission.CAMERA"/>
+  <uses-feature android:name="android.hardware.camera.autofocus"/>
+  <uses-feature android:name="android.hardware.camera" android:required="true"/>
+  <uses-feature android:name="android.hardware.camera.flash"/>
+
+  <!--读写sdcard权限-->
+  <uses-permission android:name="android.permission.WRITE_EXTERNAL_STORAGE"/>
+  <uses-permission android:name="android.permission.READ_EXTERNAL_STORAGE"/>
+
+</manifest>
