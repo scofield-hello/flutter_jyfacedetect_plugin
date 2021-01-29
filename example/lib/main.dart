@@ -119,7 +119,7 @@ class _MyAppState extends State<MyApp> with WidgetsBindingObserver {
                   Padding(
                     child: OutlineButton(
                       onPressed: () {
-                        //开始比对，传入原始图像数据和相似度阀值
+                        //开始检测
                         _controller.startDetect();
                       },
                       child: Text("再次检测"),
@@ -129,7 +129,7 @@ class _MyAppState extends State<MyApp> with WidgetsBindingObserver {
                   Padding(
                     child: OutlineButton(
                       onPressed: () {
-                        //开始比对，传入原始图像数据和相似度阀值
+                        //停止检测
                         _controller.stopDetect();
                         setState(() {
                           _currentState = "人脸检测停止";
