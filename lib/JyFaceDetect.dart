@@ -109,33 +109,47 @@ class JyFaceDetectViewController {
   void _onEvent(dynamic event) {
     switch (event['event']) {
       case JyFaceDetectEventType.EVENT_CAMERA_OPENED:
-        _onCameraOpened.add(null);
+        if(!_onCameraOpened.isClosed){
+          _onCameraOpened.add(null);
+        }
         break;
       case JyFaceDetectEventType.EVENT_PREVIEW:
-        _onPreview.add(JyFaceDetectPreviewFrame(event['yuvData'], event['width'], event['height']));
+        if(!_onPreview.isClosed){
+          _onPreview.add(JyFaceDetectPreviewFrame(event['yuvData'], event['width'], event['height']));
+        }
         break;
       case JyFaceDetectEventType.EVENT_PREVIEW_STOP:
-        _onPreviewStop.add(null);
+        if(!_onPreviewStop.isClosed){
+          _onPreviewStop.add(null);
+        }
         break;
       case JyFaceDetectEventType.EVENT_CAMERA_CLOSED:
-        _onCameraClosed.add(null);
+        if(!_onCameraClosed.isClosed){
+          _onCameraClosed.add(null);
+        }
         break;
       case JyFaceDetectEventType.EVENT_DETECT_START:
-        _onDetectStart.add(null);
+        if(!_onDetectStart.isClosed){
+          _onDetectStart.add(null);
+        }
         break;
       case JyFaceDetectEventType.EVENT_DETECT_RESULT:
-        _onDetectResult.add(JyFaceDetectResult(
-            event['bitmap'],
-            event["left"],
-            event["top"],
-            event["right"],
-            event["bottom"],
-            event["rollAngle"],
-            event["yawAngle"],
-            event["pitchAngle"]));
+        if(!_onDetectResult.isClosed){
+          _onDetectResult.add(JyFaceDetectResult(
+              event['bitmap'],
+              event["left"],
+              event["top"],
+              event["right"],
+              event["bottom"],
+              event["rollAngle"],
+              event["yawAngle"],
+              event["pitchAngle"]));
+        }
         break;
       case JyFaceDetectEventType.EVENT_INIT_RESULT:
-        _onInitSdkResult.add(JyDetectSdkInitResult(event['result'], event['msg']));
+        if(!_onInitSdkResult.isClosed){
+          _onInitSdkResult.add(JyDetectSdkInitResult(event['result'], event['msg']));
+        }
         break;
     }
   }

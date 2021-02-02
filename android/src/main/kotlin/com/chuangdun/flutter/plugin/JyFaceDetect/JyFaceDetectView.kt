@@ -161,7 +161,7 @@ class JyFaceDetectView(private val context: Context, messenger: BinaryMessenger,
                             mDetectStart = false
                             playSound(R.raw.face_detected, 1500)
                             val outputStream = ByteArrayOutputStream()
-                            bitmap.compress(Bitmap.CompressFormat.PNG, 100, outputStream)
+                            bitmap.compress(Bitmap.CompressFormat.JPEG, 100, outputStream)
                             uiHandler.post {
                                 eventSink?.success(mapOf(
                                         "event" to EVENT_DETECT_RESULT,
