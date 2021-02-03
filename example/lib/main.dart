@@ -14,6 +14,7 @@ class MyApp extends StatefulWidget {
 }
 
 class _MyAppState extends State<MyApp> with WidgetsBindingObserver {
+  JyFaceDetectPlugin _plugin;
   JyFaceDetectViewController _controller;
   String _currentState = "初始化";
   JyFaceDetectResult _detectResult;
@@ -21,8 +22,9 @@ class _MyAppState extends State<MyApp> with WidgetsBindingObserver {
   void initState() {
     super.initState();
     WidgetsBinding.instance.addObserver(this);
+    _plugin = JyFaceDetectPlugin();
     _controller = JyFaceDetectViewController();
-    _controller.onInitSdkResult.listen((initResult) {
+    _plugin.onInitSdkResult.listen((initResult) {
       print("onInitSdkResult");
       if (initResult.result) {
         Future.delayed(Duration(milliseconds: 500), () {
@@ -73,7 +75,7 @@ class _MyAppState extends State<MyApp> with WidgetsBindingObserver {
 
   void _onJyFaceDetectViewCreated() {
     print("_onJyFaceDetectViewCreated");
-    _controller.initFaceDetectSdk();
+    _plugin.initFaceDetectSdk();
   }
 
   @override
@@ -94,12 +96,12 @@ class _MyAppState extends State<MyApp> with WidgetsBindingObserver {
                       border: Border.all(color: Colors.black, width: 1.0),
                     ),
                     alignment: Alignment.center,
-                    height: 320,
-                    width: 240,
+                    height: 240,
+                    width: 320,
                     child: JyFaceDetectView(
                       controller: _controller,
                       onJyFaceDetectViewCreated: _onJyFaceDetectViewCreated,
-                      creationParams: JyFaceDetectViewParams(width: 240, height: 320),
+                      creationParams: JyFaceDetectViewParams(width: 320, height: 240),
                     ),
                   ),
                   if (_detectResult != null)
@@ -109,8 +111,8 @@ class _MyAppState extends State<MyApp> with WidgetsBindingObserver {
                       ),
                       margin: EdgeInsets.symmetric(horizontal: 16.0),
                       alignment: Alignment.center,
-                      height: 320,
-                      width: 240,
+                      height: 240,
+                      width: 320,
                       child: Image.memory(
                         _detectResult.bitmap,
                         fit: BoxFit.contain,
@@ -173,5 +175,6 @@ class _MyAppState extends State<MyApp> with WidgetsBindingObserver {
     _controller.stopCamera();
     _controller.releaseCamera();
     _controller.dispose();
+    _plugin.dispose();
   }
 }

@@ -82,13 +82,12 @@ class JyDetectSdkInitResult {
   const JyDetectSdkInitResult(this.result, this.msg);
 }
 
-class JyFaceDetectPreviewFrame{
+class JyFaceDetectPreviewFrame {
   final int height;
   final int width;
   final Uint8List yuvData;
   const JyFaceDetectPreviewFrame(this.yuvData, this.width, this.height);
 }
-
 
 class JyFaceDetectEventType {
   static const EVENT_CAMERA_OPENED = 0;
@@ -97,7 +96,41 @@ class JyFaceDetectEventType {
   static const EVENT_CAMERA_CLOSED = 3;
   static const EVENT_DETECT_START = 4;
   static const EVENT_DETECT_RESULT = 5;
-  static const EVENT_INIT_RESULT = 6;
+}
+
+class JyFaceDetectPlugin {
+  static JyFaceDetectPlugin _instance;
+
+  static const _methodChannel = const MethodChannel("JyFaceDetectSdk");
+  static const _eventChannel = const EventChannel("JyFaceDetectSdkEvent");
+
+  factory JyFaceDetectPlugin() => _instance ??= JyFaceDetectPlugin._();
+
+  JyFaceDetectPlugin._() {
+    _eventChannel.receiveBroadcastStream().listen(_onEvent);
+  }
+
+  void _onEvent(dynamic event) {
+    if (!_onInitSdkResult.isClosed) {
+      _onInitSdkResult.add(JyDetectSdkInitResult(event['result'], event['msg']));
+    }
+  }
+
+  final _onInitSdkResult = StreamController<JyDetectSdkInitResult>.broadcast();
+
+  ///初始化结果返回时触发.
+  Stream<JyDetectSdkInitResult> get onInitSdkResult => _onInitSdkResult.stream;
+
+  ///初始化人脸检测SDK.
+  ///初始化结果在[onInitSdkResult]中返回.
+  Future<void> initFaceDetectSdk() async {
+    _methodChannel.invokeMethod("initFaceDetectSdk");
+  }
+
+  void dispose() {
+    _onInitSdkResult.close();
+    _instance = null;
+  }
 }
 
 class JyFaceDetectViewController {
@@ -109,32 +142,33 @@ class JyFaceDetectViewController {
   void _onEvent(dynamic event) {
     switch (event['event']) {
       case JyFaceDetectEventType.EVENT_CAMERA_OPENED:
-        if(!_onCameraOpened.isClosed){
+        if (!_onCameraOpened.isClosed) {
           _onCameraOpened.add(null);
         }
         break;
       case JyFaceDetectEventType.EVENT_PREVIEW:
-        if(!_onPreview.isClosed){
-          _onPreview.add(JyFaceDetectPreviewFrame(event['yuvData'], event['width'], event['height']));
+        if (!_onPreview.isClosed) {
+          _onPreview
+              .add(JyFaceDetectPreviewFrame(event['yuvData'], event['width'], event['height']));
         }
         break;
       case JyFaceDetectEventType.EVENT_PREVIEW_STOP:
-        if(!_onPreviewStop.isClosed){
+        if (!_onPreviewStop.isClosed) {
           _onPreviewStop.add(null);
         }
         break;
       case JyFaceDetectEventType.EVENT_CAMERA_CLOSED:
-        if(!_onCameraClosed.isClosed){
+        if (!_onCameraClosed.isClosed) {
           _onCameraClosed.add(null);
         }
         break;
       case JyFaceDetectEventType.EVENT_DETECT_START:
-        if(!_onDetectStart.isClosed){
+        if (!_onDetectStart.isClosed) {
           _onDetectStart.add(null);
         }
         break;
       case JyFaceDetectEventType.EVENT_DETECT_RESULT:
-        if(!_onDetectResult.isClosed){
+        if (!_onDetectResult.isClosed) {
           _onDetectResult.add(JyFaceDetectResult(
               event['bitmap'],
               event["left"],
@@ -146,10 +180,7 @@ class JyFaceDetectViewController {
               event["pitchAngle"]));
         }
         break;
-      case JyFaceDetectEventType.EVENT_INIT_RESULT:
-        if(!_onInitSdkResult.isClosed){
-          _onInitSdkResult.add(JyDetectSdkInitResult(event['result'], event['msg']));
-        }
+      default:
         break;
     }
   }
@@ -187,19 +218,8 @@ class JyFaceDetectViewController {
 
   final _onDetectResult = StreamController<JyFaceDetectResult>.broadcast();
 
-  ///比对结果返回时触发.
+  ///检测结果返回时触发.
   Stream<JyFaceDetectResult> get onDetectResult => _onDetectResult.stream;
-
-  final _onInitSdkResult = StreamController<JyDetectSdkInitResult>.broadcast();
-
-  ///初始化结果返回时触发.
-  Stream<JyDetectSdkInitResult> get onInitSdkResult => _onInitSdkResult.stream;
-
-  ///初始化人脸比对SDK.
-  ///初始化结果在[onInitSdkResult]中返回.
-  Future<void> initFaceDetectSdk() async {
-    _methodChannel.invokeMethod("initFaceDetectSdk");
-  }
 
   ///开始预览画面,需要调用两次.
   Future<void> startPreview() async {
@@ -234,7 +254,6 @@ class JyFaceDetectViewController {
   }
 
   void dispose() {
-    _onInitSdkResult.close();
     _onCameraClosed.close();
     _onCameraOpened.close();
     _onPreview.close();

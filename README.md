@@ -5,14 +5,16 @@ A new flutter plugin project.
 ## Getting Started
 
 ```dart
+JyFaceDetectPlugin _plugin;
 JyFaceDetectViewController _controller;
 
 @override
   void initState() {
     super.initState();
     WidgetsBinding.instance.addObserver(this);
+    _plugin = JyFaceDetectPlugin();
     _controller = JyFaceDetectViewController();
-    _controller.onInitSdkResult.listen((initResult) {
+    _plugin.onInitSdkResult.listen((initResult) {
       print("onInitSdkResult");
       if (initResult.result) {
         Future.delayed(Duration(milliseconds: 500), () {
@@ -63,7 +65,7 @@ JyFaceDetectViewController _controller;
 
   void _onJyFaceDetectViewCreated() {
     print("_onJyFaceDetectViewCreated");
-    _controller.initFaceDetectSdk();
+    _plugin.initFaceDetectSdk();
   }
 
   @override
@@ -163,6 +165,7 @@ JyFaceDetectViewController _controller;
     _controller.stopCamera();
     _controller.releaseCamera();
     _controller.dispose();
+    _plugin.dispose();
   }
 
 ```

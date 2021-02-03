@@ -12,7 +12,6 @@ import com.AliveDetect.AliveDetect
 import com.camera.CameraConstant
 import com.camera.JYCamera
 import com.camera.impl.CameraCallback
-import com.google.common.util.concurrent.ThreadFactoryBuilder
 import com.serenegiant.cdpids.CMIdsFace
 import io.flutter.plugin.common.BinaryMessenger
 import io.flutter.plugin.common.EventChannel
@@ -32,20 +31,18 @@ private const val EVENT_PREVIEW_STOP = 2
 private const val EVENT_CAMERA_CLOSED = 3
 private const val EVENT_DETECT_START = 4
 private const val EVENT_DETECT_RESULT = 5
-private const val EVENT_INIT_RESULT = 6
 private const val TAG = "JyFaceDetectView"
 
-class JyFaceDetectView(private val context: Context, messenger: BinaryMessenger, id: Int, createParams: Map<*, *>) : PlatformView,
+class JyFaceDetectView(private val context: Context, private val aliveDetect: AliveDetect,
+                       messenger: BinaryMessenger, id: Int, createParams: Map<*, *>) : PlatformView,
         MethodChannel.MethodCallHandler, EventChannel.StreamHandler{
 
 
     private val textureView: TextureView = TextureView(context)
     private val methodChannel = MethodChannel(messenger, "${VIEW_REGISTRY_NAME}_$id")
     private var eventChannel = EventChannel(messenger, "${VIEW_EVENT_REGISTRY_NAME}_$id")
-    private val threadFactory = ThreadFactoryBuilder().setNameFormat("JyFaceDetectPool_%d").build()
     private val threadPool = ThreadPoolExecutor(1, 1, 0L,
-            TimeUnit.MILLISECONDS, LinkedBlockingQueue<Runnable>(), threadFactory)
-    private val mAliveDetect:AliveDetect = AliveDetect(context)
+            TimeUnit.MILLISECONDS, LinkedBlockingQueue<Runnable>())
     private val uiHandler = Handler()
     private var eventSink: EventChannel.EventSink? = null
     private val mCamera: JYCamera
@@ -112,21 +109,7 @@ class JyFaceDetectView(private val context: Context, messenger: BinaryMessenger,
                 .build()
     }
 
-    private fun initFaceDetectSdk(){
-        mAliveDetect.setAliveDetectInitListener { result: Int, description: String ->
-            run {
-                Log.i(TAG, "活体检测模块初始化:$result, description:$description")
-                uiHandler.post {
-                    eventSink?.success(mapOf(
-                            "event" to EVENT_INIT_RESULT,
-                            "result" to (result == 0),
-                            "msg" to description
-                    ))
-                }
-            }
-        }
-        mAliveDetect.init_In()
-    }
+
 
     private fun startFaceDetect(){
         if (mDetectStart){
@@ -148,7 +131,7 @@ class JyFaceDetectView(private val context: Context, messenger: BinaryMessenger,
                     Log.e(TAG, "线程睡眠500毫秒失败.")
                 }
                 val bitmap = mCamera.takePicture()
-                val faceList: Array<out CMIdsFace> = mAliveDetect.detectFace(bitmap, null)
+                val faceList: Array<out CMIdsFace> = aliveDetect.detectFace(bitmap, null)
                         ?: continue
                 when {
                     faceList.size == 1 -> {
@@ -225,9 +208,6 @@ class JyFaceDetectView(private val context: Context, messenger: BinaryMessenger,
     override fun onMethodCall(call: MethodCall, result: MethodChannel.Result) {
         Log.i(TAG, "JyFaceDetectView:onMethodCall:${call.method}")
         when(call.method){
-            "initFaceDetectSdk" -> {
-                initFaceDetectSdk()
-            }
             "startPreview" -> {
                 mCamera.doStartPreview(1, textureView)
             }
