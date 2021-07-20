@@ -19,7 +19,6 @@ import io.flutter.plugin.common.MethodCall
 import io.flutter.plugin.common.MethodChannel
 import io.flutter.plugin.platform.PlatformView
 import java.io.ByteArrayOutputStream
-import java.lang.Exception
 import java.util.concurrent.LinkedBlockingQueue
 import java.util.concurrent.ThreadPoolExecutor
 import java.util.concurrent.TimeUnit
@@ -54,7 +53,14 @@ class JyFaceDetectView(private val context: Context, private val aliveDetect: Al
         val previewWidth = createParams["previewWidth"] as Int
         val previewHeight = createParams["previewHeight"] as Int
         val rotate = createParams["rotate"] as Int
-        textureView.layoutParams = ViewGroup.LayoutParams(width, height)
+        Log.d(TAG, "width:$width, height:$height")
+        //val measuredWidth = View.MeasureSpec.makeMeasureSpec(previewWidth, View.MeasureSpec.EXACTLY)
+        //val measuredHeight = View.MeasureSpec.makeMeasureSpec(previewHeight, View.MeasureSpec.EXACTLY)
+        //Log.d(TAG, "measureWidth:$measuredWidth, measureHeight:$measuredHeight")
+        //textureView.measure(measuredWidth, measuredHeight)
+        textureView.layoutParams = ViewGroup.LayoutParams(
+            dp2px(context,width.toFloat()),
+            dp2px(context,height.toFloat()))
         methodChannel.setMethodCallHandler(this)
         eventChannel.setStreamHandler(this)
         mCamera = initCamera(previewWidth, previewHeight, rotate)
@@ -66,6 +72,7 @@ class JyFaceDetectView(private val context: Context, private val aliveDetect: Al
                 .setCameraPreviewSize(previewWidth, previewHeight)
                 .setCameraPictureSize(previewWidth, previewHeight)
                 .setCameraRotation(rotate)
+                .mirror()
                 .setCameraCallback(object : CameraCallback {
                     override fun onOpenedCamera() {
                         Log.d(TAG, "Camera opened.")
@@ -209,7 +216,10 @@ class JyFaceDetectView(private val context: Context, private val aliveDetect: Al
         Log.i(TAG, "JyFaceDetectView:onMethodCall:${call.method}")
         when(call.method){
             "startPreview" -> {
-                mCamera.doStartPreview(1, textureView)
+                Log.d(TAG,"camera id list:${mCamera.cameraIDList.joinToString(separator = ",")}")
+                mCamera.doStartPreview(CameraDecide.faceCompareId, textureView)
+                Log.d(TAG,"width:${textureView.width}, height:${textureView.height}")
+
             }
             "stopPreview" -> {
                 mCamera.doStopPreview()
@@ -236,4 +246,10 @@ class JyFaceDetectView(private val context: Context, private val aliveDetect: Al
     override fun onCancel(arguments: Any?) {
         this.eventSink = null
     }
+
+    private fun dp2px(context: Context, dp: Float): Int {
+        val scale = context.resources.displayMetrics.density
+        return (dp * scale + 0.5f).toInt()
+    }
+
 }
