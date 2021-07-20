@@ -54,10 +54,6 @@ class JyFaceDetectView(private val context: Context, private val aliveDetect: Al
         val previewHeight = createParams["previewHeight"] as Int
         val rotate = createParams["rotate"] as Int
         Log.d(TAG, "width:$width, height:$height")
-        //val measuredWidth = View.MeasureSpec.makeMeasureSpec(previewWidth, View.MeasureSpec.EXACTLY)
-        //val measuredHeight = View.MeasureSpec.makeMeasureSpec(previewHeight, View.MeasureSpec.EXACTLY)
-        //Log.d(TAG, "measureWidth:$measuredWidth, measureHeight:$measuredHeight")
-        //textureView.measure(measuredWidth, measuredHeight)
         textureView.layoutParams = ViewGroup.LayoutParams(
             dp2px(context,width.toFloat()),
             dp2px(context,height.toFloat()))
