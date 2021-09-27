@@ -131,7 +131,7 @@ class JyFaceCompareView(private val context: Context, messenger: BinaryMessenger
                 }catch (e: InterruptedException){
                     Log.e(TAG, "线程睡眠200毫秒失败.")
                 }
-                val bitmap = mCamera.takePhoto()
+                val bitmap = mCamera.takePicture()
                 val timeStart = System.currentTimeMillis()
                 val similar = Facecompare.getInstance().faceVerify(srcBitmap, bitmap)
                 Log.d(TAG, "compare similar: $similar, time: " + (System.currentTimeMillis() - timeStart))
