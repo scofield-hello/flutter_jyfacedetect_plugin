@@ -152,7 +152,8 @@ class JyFaceCompareView(private val context: Context, messenger: BinaryMessenger
                             "event" to EVENT_COMPARE_RESULT,
                             "result" to false,
                             "msg" to "人脸比对不通过，正在重试...",
-                            "similar" to similar
+                            "similar" to similar,
+                            "bitmap" to null
                     ))}
                 }
             }
