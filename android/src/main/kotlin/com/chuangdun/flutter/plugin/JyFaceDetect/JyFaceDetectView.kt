@@ -3,11 +3,15 @@ package com.chuangdun.flutter.plugin.JyFaceDetect
 import android.content.Context
 import android.graphics.Bitmap
 import android.media.MediaPlayer
+import android.os.Environment
 import android.os.Handler
 import android.util.Log
+import android.view.Gravity
 import android.view.TextureView
 import android.view.View
 import android.view.ViewGroup
+import android.widget.FrameLayout
+import android.widget.LinearLayout
 import com.AliveDetect.AliveDetect
 import com.camera.CameraConstant
 import com.camera.JYCamera
@@ -19,6 +23,7 @@ import io.flutter.plugin.common.MethodCall
 import io.flutter.plugin.common.MethodChannel
 import io.flutter.plugin.platform.PlatformView
 import java.io.ByteArrayOutputStream
+import java.io.File
 import java.util.concurrent.LinkedBlockingQueue
 import java.util.concurrent.ThreadPoolExecutor
 import java.util.concurrent.TimeUnit
@@ -39,6 +44,7 @@ class JyFaceDetectView(private val context: Context, private val aliveDetect: Al
 
     private val textureView: TextureView = TextureView(context)
     private val blackTextureView: TextureView = TextureView(context)
+    private val linearLayout:FrameLayout = FrameLayout(context)
     private val methodChannel = MethodChannel(messenger, "${VIEW_REGISTRY_NAME}_$id")
     private var eventChannel = EventChannel(messenger, "${VIEW_EVENT_REGISTRY_NAME}_$id")
     private val threadPool = ThreadPoolExecutor(1, 1, 0L,
@@ -56,12 +62,20 @@ class JyFaceDetectView(private val context: Context, private val aliveDetect: Al
         val previewHeight = createParams["previewHeight"] as Int
         val rotate = createParams["rotate"] as Int
         Log.d(TAG, "width:$width, height:$height")
-        textureView.layoutParams = ViewGroup.LayoutParams(
+        textureView.layoutParams = FrameLayout.LayoutParams(
+            dp2px(context,width.toFloat() / 2),
+            dp2px(context, height.toFloat()),
+            Gravity.LEFT)
+        blackTextureView.layoutParams = FrameLayout.LayoutParams(
+            dp2px(context,width.toFloat() / 2),
+            dp2px(context,height.toFloat()),
+            Gravity.RIGHT
+            )
+        linearLayout.layoutParams = ViewGroup.LayoutParams(
             dp2px(context,width.toFloat()),
             dp2px(context,height.toFloat()))
-        blackTextureView.layoutParams = ViewGroup.LayoutParams(
-            dp2px(context,width.toFloat()),
-            dp2px(context,height.toFloat()))
+        linearLayout.addView(textureView)
+        linearLayout.addView(blackTextureView)
         methodChannel.setMethodCallHandler(this)
         eventChannel.setStreamHandler(this)
         mCamera = initCamera(previewWidth, previewHeight, rotate)
@@ -145,7 +159,7 @@ class JyFaceDetectView(private val context: Context, private val aliveDetect: Al
             playSound(R.raw.start_detect_face, 4000)
             while (mDetectStart){
                 try {
-                    Thread.sleep(500)
+                    Thread.sleep(200)
                 }catch (e: InterruptedException){
                     Log.e(TAG, "线程睡眠500毫秒失败.")
                 }
@@ -153,8 +167,7 @@ class JyFaceDetectView(private val context: Context, private val aliveDetect: Al
                 val blackBitmap = mBlackCamera.takePicture()
                 val reData = FloatArray(150 * 150 * 4)
                 val cmIdsFace = arrayOfNulls<CMIdsFace>(1)
-                val ret = aliveDetect.aliveDetect_InFloatWithPosition(bitmap, blackBitmap, cmIdsFace, reData)
-                when(ret) {
+                when(val ret = aliveDetect.aliveDetect_InFloatWithPosition(bitmap, blackBitmap, cmIdsFace, reData)) {
                     0 -> {
                         if (cmIdsFace.size == 1){
                             var faceInfo = cmIdsFace[0]!!
@@ -168,30 +181,45 @@ class JyFaceDetectView(private val context: Context, private val aliveDetect: Al
                                 playSound(R.raw.face_detected, 1500)
                                 val outputStream = ByteArrayOutputStream()
                                 bitmap.compress(Bitmap.CompressFormat.JPEG, 100, outputStream)
-                                uiHandler.post {
-                                    eventSink?.success(mapOf(
-                                        "event" to EVENT_DETECT_RESULT,
-                                        "bitmap" to outputStream.toByteArray(),
-                                        "left" to faceInfo.left,
-                                        "top" to faceInfo.top,
-                                        "right" to faceInfo.right,
-                                        "bottom" to faceInfo.bottom,
-                                        "rollAngle" to faceInfo.roll_angle,
-                                        "yawAngle" to faceInfo.yaw_angle,
-                                        "pitchAngle" to faceInfo.pitch_angle
-                                    ))
-                                }}
+                                fireResultEvent(result = true,
+                                    msg = "已通过活体检测，正在识别中...",
+                                    bitmap = outputStream.toByteArray(),
+                                    face = faceInfo)
+                            }else{
+                                fireResultEvent(result = false, msg = "人脸偏斜，请您正对摄像头")
+                            }
                         }else{
                             Log.i(TAG, "检测到${cmIdsFace.size}张人脸.")
+                            fireResultEvent(result = false, msg = "画面中不允许出现多张人脸")
                         }
                     }
                     else ->{
-                        Log.w(TAG, "活体检测结果:$ret")
+                        fireResultEvent(result = false, msg = "活体检测不通过，请重试(错误码:$ret)")
                     }
                 }
             }
         }
         threadPool.execute(detectTask)
+    }
+
+    private fun fireResultEvent(result:Boolean, msg:String,
+                                bitmap:ByteArray? = null,
+                                face:CMIdsFace? = null):Unit{
+        uiHandler.post {
+            eventSink?.success(mapOf(
+                "event" to EVENT_DETECT_RESULT,
+                "result" to result,
+                "msg" to msg,
+                "bitmap" to bitmap,
+                "left" to face?.left,
+                "top" to face?.top,
+                "right" to face?.right,
+                "bottom" to face?.bottom,
+                "rollAngle" to face?.roll_angle,
+                "yawAngle" to face?.yaw_angle,
+                "pitchAngle" to face?.pitch_angle
+            ))
+        }
     }
 
     private fun playSound(resid:Int, waitMillis:Long){
@@ -210,7 +238,7 @@ class JyFaceDetectView(private val context: Context, private val aliveDetect: Al
 
     override fun getView(): View {
         Log.i(TAG, "JyFaceDetectView:getView")
-        return textureView
+        return linearLayout
     }
 
     override fun onFlutterViewAttached(flutterView: View) {
@@ -237,7 +265,6 @@ class JyFaceDetectView(private val context: Context, private val aliveDetect: Al
                 mCamera.doStartPreview(cameraIds[0], textureView)
                 mBlackCamera.doStartPreview(cameraIds[1], blackTextureView)
                 Log.d(TAG,"width:${textureView.width}, height:${textureView.height}")
-
             }
             "stopPreview" -> {
                 mCamera.doStopPreview()

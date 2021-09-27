@@ -96,12 +96,13 @@ class _MyAppState extends State<MyApp> with WidgetsBindingObserver {
                       border: Border.all(color: Colors.black, width: 1.0),
                     ),
                     alignment: Alignment.center,
+                    width: 640,
                     height: 240,
-                    width: 320,
                     child: JyFaceDetectView(
                       controller: _controller,
                       onJyFaceDetectViewCreated: _onJyFaceDetectViewCreated,
-                      creationParams: JyFaceDetectViewParams(width: 320, height: 240),
+                      creationParams:
+                          JyFaceDetectViewParams(width: 640, height: 240),
                     ),
                   ),
                   if (_detectResult != null)
@@ -113,10 +114,12 @@ class _MyAppState extends State<MyApp> with WidgetsBindingObserver {
                       alignment: Alignment.center,
                       height: 240,
                       width: 320,
-                      child: Image.memory(
-                        _detectResult.bitmap,
-                        fit: BoxFit.contain,
-                      ),
+                      child: _detectResult.result
+                          ? Image.memory(
+                              _detectResult.bitmap,
+                              fit: BoxFit.contain,
+                            )
+                          : Text(_detectResult.msg),
                     ),
                   Padding(
                     child: OutlineButton(

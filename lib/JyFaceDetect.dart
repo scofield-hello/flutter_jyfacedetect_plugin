@@ -60,7 +60,8 @@ class JyFaceDetectView extends StatelessWidget {
 }
 
 class JyFaceDetectResult {
-  ///图片数据.
+  final bool result;
+  final String msg;
   final Uint8List bitmap;
   final int left;
   final int top;
@@ -69,8 +70,17 @@ class JyFaceDetectResult {
   final double rollAngle;
   final double yawAngle;
   final double pitchAngle;
-  const JyFaceDetectResult(this.bitmap, this.left, this.top, this.right, this.bottom,
-      this.rollAngle, this.yawAngle, this.pitchAngle);
+  const JyFaceDetectResult(
+      this.result,
+      this.msg,
+      this.bitmap,
+      this.left,
+      this.top,
+      this.right,
+      this.bottom,
+      this.rollAngle,
+      this.yawAngle,
+      this.pitchAngle);
 }
 
 class JyDetectSdkInitResult {
@@ -112,7 +122,8 @@ class JyFaceDetectPlugin {
 
   void _onEvent(dynamic event) {
     if (!_onInitSdkResult.isClosed) {
-      _onInitSdkResult.add(JyDetectSdkInitResult(event['result'], event['msg']));
+      _onInitSdkResult
+          .add(JyDetectSdkInitResult(event['result'], event['msg']));
     }
   }
 
@@ -148,8 +159,8 @@ class JyFaceDetectViewController {
         break;
       case JyFaceDetectEventType.EVENT_PREVIEW:
         if (!_onPreview.isClosed) {
-          _onPreview
-              .add(JyFaceDetectPreviewFrame(event['yuvData'], event['width'], event['height']));
+          _onPreview.add(JyFaceDetectPreviewFrame(
+              event['yuvData'], event['width'], event['height']));
         }
         break;
       case JyFaceDetectEventType.EVENT_PREVIEW_STOP:
@@ -170,6 +181,8 @@ class JyFaceDetectViewController {
       case JyFaceDetectEventType.EVENT_DETECT_RESULT:
         if (!_onDetectResult.isClosed) {
           _onDetectResult.add(JyFaceDetectResult(
+              event['result'],
+              event['msg'],
               event['bitmap'],
               event["left"],
               event["top"],
