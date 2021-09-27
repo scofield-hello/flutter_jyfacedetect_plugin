@@ -24,7 +24,7 @@ class _MyAppState extends State<MyApp> with WidgetsBindingObserver {
     WidgetsBinding.instance.addObserver(this);
     _plugin = JyFaceDetectPlugin();
     _controller = JyFaceDetectViewController();
-    _plugin.onInitSdkResult.listen((initResult) {
+    _plugin.onFaceDetectSdkInitResult.listen((initResult) {
       print("onInitSdkResult");
       if (initResult.result) {
         Future.delayed(Duration(milliseconds: 500), () {

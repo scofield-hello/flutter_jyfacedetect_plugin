@@ -3,7 +3,6 @@ package com.chuangdun.flutter.plugin.JyFaceDetect
 import android.content.Context
 import android.graphics.Bitmap
 import android.media.MediaPlayer
-import android.os.Environment
 import android.os.Handler
 import android.util.Log
 import android.view.Gravity
@@ -11,7 +10,6 @@ import android.view.TextureView
 import android.view.View
 import android.view.ViewGroup
 import android.widget.FrameLayout
-import android.widget.LinearLayout
 import com.AliveDetect.AliveDetect
 import com.camera.CameraConstant
 import com.camera.JYCamera
@@ -23,7 +21,6 @@ import io.flutter.plugin.common.MethodCall
 import io.flutter.plugin.common.MethodChannel
 import io.flutter.plugin.platform.PlatformView
 import java.io.ByteArrayOutputStream
-import java.io.File
 import java.util.concurrent.LinkedBlockingQueue
 import java.util.concurrent.ThreadPoolExecutor
 import java.util.concurrent.TimeUnit
@@ -45,8 +42,8 @@ class JyFaceDetectView(private val context: Context, private val aliveDetect: Al
     private val textureView: TextureView = TextureView(context)
     private val blackTextureView: TextureView = TextureView(context)
     private val linearLayout:FrameLayout = FrameLayout(context)
-    private val methodChannel = MethodChannel(messenger, "${VIEW_REGISTRY_NAME}_$id")
-    private var eventChannel = EventChannel(messenger, "${VIEW_EVENT_REGISTRY_NAME}_$id")
+    private val methodChannel = MethodChannel(messenger, "${DETECT_VIEW_REGISTRY_NAME}_$id")
+    private var eventChannel = EventChannel(messenger, "${DETECT_VIEW_EVENT_REGISTRY_NAME}_$id")
     private val threadPool = ThreadPoolExecutor(1, 1, 0L,
             TimeUnit.MILLISECONDS, LinkedBlockingQueue<Runnable>())
     private val uiHandler = Handler()

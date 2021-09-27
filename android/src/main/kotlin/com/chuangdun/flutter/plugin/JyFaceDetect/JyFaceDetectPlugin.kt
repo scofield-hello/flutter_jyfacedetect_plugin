@@ -5,6 +5,7 @@ import android.os.Handler
 import android.util.Log
 import androidx.annotation.NonNull
 import com.AliveDetect.AliveDetect
+import com.common.Facecompare
 
 import io.flutter.embedding.engine.plugins.FlutterPlugin
 import io.flutter.plugin.common.EventChannel
@@ -12,8 +13,10 @@ import io.flutter.plugin.common.MethodCall
 import io.flutter.plugin.common.MethodChannel
 
 private const val TAG = "JyFaceDetectPlugin"
-const val VIEW_REGISTRY_NAME = "JyFaceDetectView"
-const val VIEW_EVENT_REGISTRY_NAME = "JyFaceDetectViewEvent"
+const val DETECT_VIEW_REGISTRY_NAME = "JyFaceDetectView"
+const val DETECT_VIEW_EVENT_REGISTRY_NAME = "JyFaceDetectViewEvent"
+const val COMPARE_VIEW_REGISTRY_NAME = "JyFaceCompareView"
+const val COMPARE_VIEW_EVENT_REGISTRY_NAME = "JyFaceCompareViewEvent"
 const val SDK_METHOD_REGISTRY_NAME = "JyFaceDetectSdk"
 const val SDK_EVENT_REGISTRY_NAME = "JyFaceDetectSdkEvent"
 
@@ -36,7 +39,9 @@ class JyFaceDetectPlugin: FlutterPlugin, MethodChannel.MethodCallHandler, EventC
     sdkMethodChannel.setMethodCallHandler(this)
     sdkEventChannel.setStreamHandler(this)
     val viewFactory = JyFaceDetectViewFactory(context, mAliveDetect, flutterPluginBinding.binaryMessenger)
-    flutterPluginBinding.platformViewRegistry.registerViewFactory(VIEW_REGISTRY_NAME, viewFactory)
+    flutterPluginBinding.platformViewRegistry.registerViewFactory(DETECT_VIEW_REGISTRY_NAME, viewFactory)
+    val compareViewFactory = JyFaceCompareViewFactory(context, flutterPluginBinding.binaryMessenger)
+    flutterPluginBinding.platformViewRegistry.registerViewFactory(COMPARE_VIEW_REGISTRY_NAME, compareViewFactory)
   }
 
   override fun onDetachedFromEngine(@NonNull binding: FlutterPlugin.FlutterPluginBinding) {
@@ -50,6 +55,12 @@ class JyFaceDetectPlugin: FlutterPlugin, MethodChannel.MethodCallHandler, EventC
     when(call.method){
       "initFaceDetectSdk" -> {
         initFaceDetectSdk()
+      }
+      "initFaceCompareSdk" -> {
+        initFaceCompareSdk()
+      }
+      "releaseFaceCompare" -> {
+        Facecompare.getInstance().releaseFace()
       }
     }
   }
@@ -68,6 +79,7 @@ class JyFaceDetectPlugin: FlutterPlugin, MethodChannel.MethodCallHandler, EventC
         Log.i(TAG, "活体检测模块初始化:$result, description:$description")
         uiHandler.post {
           eventSink?.success(mapOf(
+                  "type" to 1,
                   "result" to (result == 0),
                   "msg" to description
           ))
@@ -75,5 +87,18 @@ class JyFaceDetectPlugin: FlutterPlugin, MethodChannel.MethodCallHandler, EventC
       }
     }
     mAliveDetect.init_In()
+  }
+
+  private fun initFaceCompareSdk(){
+    Facecompare.getInstance().faceInit(context){ result: Boolean, msg: String ->
+      run {
+        Log.i(TAG, "人脸比对初始化结果:$result, $msg")
+        uiHandler.post {  eventSink?.success(mapOf(
+          "type" to 0,
+          "result" to result,
+          "msg" to msg
+        ))}
+      }
+    }
   }
 }
