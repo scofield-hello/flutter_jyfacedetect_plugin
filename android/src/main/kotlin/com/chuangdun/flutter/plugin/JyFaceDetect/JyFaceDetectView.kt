@@ -38,6 +38,7 @@ class JyFaceDetectView(private val context: Context, private val aliveDetect: Al
 
 
     private val textureView: TextureView = TextureView(context)
+    private val blackTextureView: TextureView = TextureView(context)
     private val methodChannel = MethodChannel(messenger, "${VIEW_REGISTRY_NAME}_$id")
     private var eventChannel = EventChannel(messenger, "${VIEW_EVENT_REGISTRY_NAME}_$id")
     private val threadPool = ThreadPoolExecutor(1, 1, 0L,
@@ -45,6 +46,7 @@ class JyFaceDetectView(private val context: Context, private val aliveDetect: Al
     private val uiHandler = Handler()
     private var eventSink: EventChannel.EventSink? = null
     private val mCamera: JYCamera
+    private val mBlackCamera: JYCamera
     private var mDetectStart = false
     private var mMediaPlayer:MediaPlayer? = null
     init {
@@ -57,9 +59,13 @@ class JyFaceDetectView(private val context: Context, private val aliveDetect: Al
         textureView.layoutParams = ViewGroup.LayoutParams(
             dp2px(context,width.toFloat()),
             dp2px(context,height.toFloat()))
+        blackTextureView.layoutParams = ViewGroup.LayoutParams(
+            dp2px(context,width.toFloat()),
+            dp2px(context,height.toFloat()))
         methodChannel.setMethodCallHandler(this)
         eventChannel.setStreamHandler(this)
         mCamera = initCamera(previewWidth, previewHeight, rotate)
+        mBlackCamera = initBlackCamera(previewWidth, previewHeight, rotate)
     }
 
     private fun initCamera(previewWidth: Int, previewHeight: Int, rotate: Int):JYCamera{
@@ -112,6 +118,16 @@ class JyFaceDetectView(private val context: Context, private val aliveDetect: Al
                 .build()
     }
 
+    private fun initBlackCamera(previewWidth: Int, previewHeight: Int, rotate: Int):JYCamera{
+        return JYCamera.Builder(context)
+            .setCameraType(CameraConstant.CAMERA_1)
+            .setCameraPreviewSize(previewWidth, previewHeight)
+            .setCameraPictureSize(previewWidth, previewHeight)
+            .setCameraRotation(rotate)
+            .mirror()
+            .build()
+    }
+
 
 
     private fun startFaceDetect(){
@@ -134,39 +150,43 @@ class JyFaceDetectView(private val context: Context, private val aliveDetect: Al
                     Log.e(TAG, "线程睡眠500毫秒失败.")
                 }
                 val bitmap = mCamera.takePicture()
-                val faceList: Array<out CMIdsFace> = aliveDetect.detectFace(bitmap, null)
-                        ?: continue
-                when {
-                    faceList.size == 1 -> {
-                        Log.d(TAG, "face in top:${faceList[0].top}, right:${faceList[0].right}, " +
-                                "bottom: ${faceList[0].bottom}, left: ${faceList[0].left}")
-                        Log.d(TAG, "face roll_angle:${faceList[0].roll_angle}, " +
-                                "pitch_angle:${faceList[0].pitch_angle}, " +
-                                "yaw_angle:${faceList[0].yaw_angle}")
-                        if (faceList[0].isRightAngle()){
-                            mDetectStart = false
-                            playSound(R.raw.face_detected, 1500)
-                            val outputStream = ByteArrayOutputStream()
-                            bitmap.compress(Bitmap.CompressFormat.JPEG, 100, outputStream)
-                            uiHandler.post {
-                                eventSink?.success(mapOf(
+                val blackBitmap = mBlackCamera.takePicture()
+                val reData = FloatArray(150 * 150 * 4)
+                val cmIdsFace = arrayOfNulls<CMIdsFace>(1)
+                val ret = aliveDetect.aliveDetect_InFloatWithPosition(bitmap, blackBitmap, cmIdsFace, reData)
+                when(ret) {
+                    0 -> {
+                        if (cmIdsFace.size == 1){
+                            var faceInfo = cmIdsFace[0]!!
+                            Log.d(TAG, "face in top:${faceInfo.top}, right:${faceInfo.right}, " +
+                                    "bottom: ${faceInfo.bottom}, left: ${faceInfo.left}")
+                            Log.d(TAG, "face roll_angle:${faceInfo.roll_angle}, " +
+                                    "pitch_angle:${faceInfo.pitch_angle}, " +
+                                    "yaw_angle:${faceInfo.yaw_angle}")
+                            if (faceInfo.isRightAngle()){
+                                mDetectStart = false
+                                playSound(R.raw.face_detected, 1500)
+                                val outputStream = ByteArrayOutputStream()
+                                bitmap.compress(Bitmap.CompressFormat.JPEG, 100, outputStream)
+                                uiHandler.post {
+                                    eventSink?.success(mapOf(
                                         "event" to EVENT_DETECT_RESULT,
                                         "bitmap" to outputStream.toByteArray(),
-                                        "left" to faceList[0].left,
-                                        "top" to faceList[0].top,
-                                        "right" to faceList[0].right,
-                                        "bottom" to faceList[0].bottom,
-                                        "rollAngle" to faceList[0].roll_angle,
-                                        "yawAngle" to faceList[0].yaw_angle,
-                                        "pitchAngle" to faceList[0].pitch_angle
-                                ))
-                        }}
+                                        "left" to faceInfo.left,
+                                        "top" to faceInfo.top,
+                                        "right" to faceInfo.right,
+                                        "bottom" to faceInfo.bottom,
+                                        "rollAngle" to faceInfo.roll_angle,
+                                        "yawAngle" to faceInfo.yaw_angle,
+                                        "pitchAngle" to faceInfo.pitch_angle
+                                    ))
+                                }}
+                        }else{
+                            Log.i(TAG, "检测到${cmIdsFace.size}张人脸.")
+                        }
                     }
-                    faceList.isNullOrEmpty() -> {
-                        Log.i(TAG, "没有检测到人脸.")
-                    }
-                    else -> {
-                        Log.i(TAG, "检测到${faceList.size}张人脸.")
+                    else ->{
+                        Log.w(TAG, "活体检测结果:$ret")
                     }
                 }
             }
@@ -212,16 +232,20 @@ class JyFaceDetectView(private val context: Context, private val aliveDetect: Al
         Log.i(TAG, "JyFaceDetectView:onMethodCall:${call.method}")
         when(call.method){
             "startPreview" -> {
-                Log.d(TAG,"camera id list:${mCamera.cameraIDList.joinToString(separator = ",")}")
-                mCamera.doStartPreview(CameraDecide.faceCompareId, textureView)
+                val cameraIds = CameraDecide.doubleId
+                Log.d(TAG,"camera id list:${cameraIds}")
+                mCamera.doStartPreview(cameraIds[0], textureView)
+                mBlackCamera.doStartPreview(cameraIds[1], blackTextureView)
                 Log.d(TAG,"width:${textureView.width}, height:${textureView.height}")
 
             }
             "stopPreview" -> {
                 mCamera.doStopPreview()
+                mBlackCamera.doStopPreview()
             }
             "stopCamera" -> {
                 mCamera.doStopCamera()
+                mBlackCamera.doStopCamera()
             }
             "startDetect" -> {
                 startFaceDetect()
@@ -231,6 +255,7 @@ class JyFaceDetectView(private val context: Context, private val aliveDetect: Al
             }
             "releaseCamera" -> {
                 mCamera.releaseAll()
+                mBlackCamera.releaseAll()
             }
         }
     }
