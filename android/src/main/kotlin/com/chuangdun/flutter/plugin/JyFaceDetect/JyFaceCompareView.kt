@@ -165,14 +165,7 @@ class JyFaceCompareView(private val context: Context, private val aliveDetect: A
                     playSound(R.raw.face_verified, 1500)
                     val outputStream = ByteArrayOutputStream()
                     bitmap.compress(Bitmap.CompressFormat.JPEG, 100, outputStream)
-                    uiHandler.post {  eventSink?.success(mapOf(
-                            "event" to EVENT_COMPARE_RESULT,
-                            "result" to true,
-                            "msg" to "已通过人脸比对",
-                            "similar" to similar,
-                            "bitmap" to outputStream.toByteArray()
-                    ))}
-                    fireCompareResult(result = true, msg = "人脸比对已通过", similar = similar)
+                    fireCompareResult(result = true, msg = "人脸比对已通过", similar = similar, bitmap = outputStream.toByteArray())
                 }else{
                     fireCompareResult(result = false, msg = "人脸比对不通过，相似度低", similar = similar)
                 }
@@ -181,7 +174,7 @@ class JyFaceCompareView(private val context: Context, private val aliveDetect: A
         threadPool.execute(detectTask)
     }
 
-    private fun fireCompareResult(result:Boolean, msg:String, similar:Int=0, bitmap:Bitmap?=null):Unit{
+    private fun fireCompareResult(result:Boolean, msg:String, similar:Int=0, bitmap:ByteArray?=null):Unit{
         uiHandler.post {  eventSink?.success(mapOf(
             "event" to EVENT_COMPARE_RESULT,
             "result" to result,
