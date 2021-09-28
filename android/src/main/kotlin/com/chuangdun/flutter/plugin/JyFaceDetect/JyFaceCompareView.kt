@@ -151,8 +151,8 @@ class JyFaceCompareView(private val context: Context, private val aliveDetect: A
                     fireCompareResult(result = false, msg = "人脸比对不通过，人脸区域太小")
                     continue
                 }
-                if (face.left <= 20 || (width - face.right) <= 20 ||
-                        face.top <= 20 || (height - face.bottom) <= 20){
+                if (face.left < 20 || (width - face.right) < 20 ||
+                        face.top < 20 || (height - face.bottom) < 20){
                     fireCompareResult(result = false, msg = "人脸比对不通过，人脸太靠近边框")
                 }
                 if (!face.isRightAngle()){
