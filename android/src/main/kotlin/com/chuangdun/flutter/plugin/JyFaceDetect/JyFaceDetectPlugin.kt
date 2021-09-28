@@ -40,7 +40,7 @@ class JyFaceDetectPlugin: FlutterPlugin, MethodChannel.MethodCallHandler, EventC
     sdkEventChannel.setStreamHandler(this)
     val viewFactory = JyFaceDetectViewFactory(context, mAliveDetect, flutterPluginBinding.binaryMessenger)
     flutterPluginBinding.platformViewRegistry.registerViewFactory(DETECT_VIEW_REGISTRY_NAME, viewFactory)
-    val compareViewFactory = JyFaceCompareViewFactory(context, flutterPluginBinding.binaryMessenger)
+    val compareViewFactory = JyFaceCompareViewFactory(context, mAliveDetect, flutterPluginBinding.binaryMessenger)
     flutterPluginBinding.platformViewRegistry.registerViewFactory(COMPARE_VIEW_REGISTRY_NAME, compareViewFactory)
   }
 

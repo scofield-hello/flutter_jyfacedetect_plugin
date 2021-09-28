@@ -4,11 +4,13 @@ import android.content.Context
 import android.graphics.Bitmap
 import android.graphics.BitmapFactory
 import android.media.MediaPlayer
+import android.os.Environment
 import android.os.Handler
 import android.util.Log
 import android.view.TextureView
 import android.view.View
 import android.view.ViewGroup
+import com.AliveDetect.AliveDetect
 import com.camera.CameraConstant
 import com.camera.JYCamera
 import com.camera.impl.CameraCallback
@@ -19,6 +21,7 @@ import io.flutter.plugin.common.MethodCall
 import io.flutter.plugin.common.MethodChannel
 import io.flutter.plugin.platform.PlatformView
 import java.io.ByteArrayOutputStream
+import java.io.File
 import java.util.concurrent.LinkedBlockingQueue
 import java.util.concurrent.ThreadPoolExecutor
 import java.util.concurrent.TimeUnit
@@ -32,7 +35,7 @@ private const val EVENT_COMPARE_START = 4
 private const val EVENT_COMPARE_RESULT = 5
 private const val TAG = "JyFaceCompareView"
 
-class JyFaceCompareView(private val context: Context, messenger: BinaryMessenger, id: Int, createParams: Map<*, *>) : PlatformView,
+class JyFaceCompareView(private val context: Context, private val aliveDetect: AliveDetect, messenger: BinaryMessenger, id: Int, createParams: Map<*, *>) : PlatformView,
         MethodChannel.MethodCallHandler, EventChannel.StreamHandler{
 
 
@@ -47,15 +50,17 @@ class JyFaceCompareView(private val context: Context, messenger: BinaryMessenger
     private var mMediaPlayer:MediaPlayer? = null
     private val mCamera: JYCamera
     private var mCompareStart = false
+    private val width:Int
+    private val height:Int
     init {
-        val width = createParams["width"] as Int
-        val height = createParams["height"] as Int
+        val widthAsDP = (createParams["width"] as Int)
+        width = dp2px(context, widthAsDP.toFloat())
+        val heightAsDP = (createParams["height"] as Int)
+        height = dp2px(context, heightAsDP.toFloat())
         val previewWidth = createParams["previewWidth"] as Int
         val previewHeight = createParams["previewHeight"] as Int
         val rotate = createParams["rotate"] as Int
-        textureView.layoutParams = ViewGroup.LayoutParams(
-            dp2px(context,width.toFloat()),
-            dp2px(context,height.toFloat()))
+        textureView.layoutParams = ViewGroup.LayoutParams(width,height)
         methodChannel.setMethodCallHandler(this)
         eventChannel.setStreamHandler(this)
         mCamera = initCamera(previewWidth, previewHeight, rotate)
@@ -132,9 +137,29 @@ class JyFaceCompareView(private val context: Context, messenger: BinaryMessenger
                     Log.e(TAG, "线程睡眠200毫秒失败.")
                 }
                 val bitmap = mCamera.takePicture()
-                val timeStart = System.currentTimeMillis()
+                val faceList = aliveDetect.detectFace(bitmap, null)
+                if (faceList == null || faceList.isEmpty()){
+                    fireCompareResult(result = false, msg = "人脸比对不通过，未检测到人脸")
+                    continue
+                }
+                if (faceList.size > 1){
+                    fireCompareResult(result = false, msg = "人脸比对不通过，检测到${faceList.size}张人脸")
+                    continue
+                }
+                val face = faceList[0]
+                if (face.right - face.left < 120 || face.bottom - face.top < 120){
+                    fireCompareResult(result = false, msg = "人脸比对不通过，人脸区域太小")
+                    continue
+                }
+                if (face.left <= 20 || (width - face.right) <= 20 ||
+                        face.top <= 20 || (height - face.bottom) <= 20){
+                    fireCompareResult(result = false, msg = "人脸比对不通过，人脸太靠近边框")
+                }
+                if (!face.isRightAngle()){
+                    fireCompareResult(result = false, msg = "人脸比对不通过，人脸角度过于偏斜")
+                    continue
+                }
                 val similar = Facecompare.getInstance().faceVerify(srcBitmap, bitmap)
-                Log.d(TAG, "compare similar: $similar, time: " + (System.currentTimeMillis() - timeStart))
                 if (similar >= threshold){
                     mCompareStart = false
                     playSound(R.raw.face_verified, 1500)
@@ -147,18 +172,23 @@ class JyFaceCompareView(private val context: Context, messenger: BinaryMessenger
                             "similar" to similar,
                             "bitmap" to outputStream.toByteArray()
                     ))}
+                    fireCompareResult(result = true, msg = "人脸比对已通过", similar = similar)
                 }else{
-                    uiHandler.post {  eventSink?.success(mapOf(
-                            "event" to EVENT_COMPARE_RESULT,
-                            "result" to false,
-                            "msg" to "人脸比对不通过，正在重试...",
-                            "similar" to similar,
-                            "bitmap" to null
-                    ))}
+                    fireCompareResult(result = false, msg = "人脸比对不通过，相似度低", similar = similar)
                 }
             }
         }
         threadPool.execute(detectTask)
+    }
+
+    private fun fireCompareResult(result:Boolean, msg:String, similar:Int=0, bitmap:Bitmap?=null):Unit{
+        uiHandler.post {  eventSink?.success(mapOf(
+            "event" to EVENT_COMPARE_RESULT,
+            "result" to result,
+            "msg" to msg,
+            "similar" to similar,
+            "bitmap" to bitmap
+        ))}
     }
 
     private fun playSound(resid: Int, waitMillis: Long){
