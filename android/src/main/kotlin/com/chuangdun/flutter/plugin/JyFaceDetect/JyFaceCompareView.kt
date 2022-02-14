@@ -137,6 +137,7 @@ class JyFaceCompareView(private val context: Context, private val aliveDetect: A
                     Log.e(TAG, "线程睡眠200毫秒失败.")
                 }
                 val bitmap = mCamera.takePicture()
+                Log.d(TAG, "image size:${bitmap.width} * ${bitmap.height}")
                 val faceList = aliveDetect.detectFace(bitmap, null)
                 if (faceList == null || faceList.isEmpty()){
                     fireCompareResult(result = false, msg = "人脸比对不通过，未检测到人脸")
@@ -147,25 +148,32 @@ class JyFaceCompareView(private val context: Context, private val aliveDetect: A
                     continue
                 }
                 val face = faceList[0]
+                Log.d(TAG, "face size:${face.right - face.left} * ${face.bottom - face.top}")
                 if (face.right - face.left < 120 || face.bottom - face.top < 120){
-                    fireCompareResult(result = false, msg = "人脸比对不通过，人脸区域太小")
+                    fireCompareResult(result = false, msg = "人脸比对不通过，请您前进一小步")
                     continue
                 }
-                if (face.left < 20 || (width - face.right) < 20 ||
+                if (face.right - face.left > 440){
+                    fireCompareResult(result = false, msg = "人脸比对不通过，请您后退一小步")
+                    continue
+                }
+                if (face.left < 220 || (width - face.right) < 220 ||
                         face.top < 20 || (height - face.bottom) < 20){
-                    fireCompareResult(result = false, msg = "人脸比对不通过，人脸太靠近边框")
+                    fireCompareResult(result = false, msg = "人脸比对不通过，请将人脸处于预览框中央")
+                    continue
                 }
                 if (!face.isRightAngle()){
-                    fireCompareResult(result = false, msg = "人脸比对不通过，人脸角度过于偏斜")
+                    fireCompareResult(result = false, msg = "人脸比对不通过，请您平视并正对摄像头")
                     continue
                 }
                 val similar = Facecompare.getInstance().faceVerify(srcBitmap, bitmap)
                 if (similar >= threshold){
                     mCompareStart = false
                     playSound(R.raw.face_verified, 1500)
+                    val cropBitmap = Bitmap.createBitmap(bitmap, 200, 0, 480, 640)
                     val outputStream = ByteArrayOutputStream()
-                    bitmap.compress(Bitmap.CompressFormat.JPEG, 100, outputStream)
-                    fireCompareResult(result = true, msg = "人脸比对已通过", similar = similar, bitmap = outputStream.toByteArray())
+                    cropBitmap.compress(Bitmap.CompressFormat.JPEG, 100, outputStream)
+                    fireCompareResult(result = true, msg = "人脸比对已通过，请您保持两秒不要移动", similar = similar, bitmap = outputStream.toByteArray())
                 }else{
                     fireCompareResult(result = false, msg = "人脸比对不通过，相似度低", similar = similar)
                 }
