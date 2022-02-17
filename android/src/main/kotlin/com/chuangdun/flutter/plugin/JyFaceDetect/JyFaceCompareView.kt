@@ -170,7 +170,7 @@ class JyFaceCompareView(private val context: Context, private val aliveDetect: A
                 if (similar >= threshold){
                     mCompareStart = false
                     playSound(R.raw.face_verified, 1500)
-                    val cropBitmap = Bitmap.createBitmap(bitmap, 200, 0, 480, 640)
+                    val cropBitmap = Bitmap.createBitmap(bitmap, 240, 0, 480, 640)
                     val outputStream = ByteArrayOutputStream()
                     cropBitmap.compress(Bitmap.CompressFormat.JPEG, 100, outputStream)
                     fireCompareResult(result = true, msg = "人脸比对已通过，请您保持两秒不要移动", similar = similar, bitmap = outputStream.toByteArray())
