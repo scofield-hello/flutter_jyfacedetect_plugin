@@ -59,20 +59,18 @@ class JyFaceDetectView(private val context: Context, private val aliveDetect: Al
         val previewHeight = createParams["previewHeight"] as Int
         val rotate = createParams["rotate"] as Int
         Log.d(TAG, "width:$width, height:$height")
-        textureView.layoutParams = FrameLayout.LayoutParams(
-            dp2px(context,width.toFloat() / 2),
-            dp2px(context, height.toFloat()),
-            Gravity.LEFT)
+       textureView.layoutParams = FrameLayout.LayoutParams(
+            dp2px(context,width.toFloat()),
+            dp2px(context, height.toFloat()))
         blackTextureView.layoutParams = FrameLayout.LayoutParams(
-            dp2px(context,width.toFloat() / 2),
-            dp2px(context,height.toFloat()),
-            Gravity.RIGHT
+            dp2px(context,width.toFloat()),
+            dp2px(context,height.toFloat())
             )
         linearLayout.layoutParams = ViewGroup.LayoutParams(
             dp2px(context,width.toFloat()),
             dp2px(context,height.toFloat()))
-        linearLayout.addView(textureView)
         linearLayout.addView(blackTextureView)
+        linearLayout.addView(textureView)
         methodChannel.setMethodCallHandler(this)
         eventChannel.setStreamHandler(this)
         mCamera = initCamera(previewWidth, previewHeight, rotate)
