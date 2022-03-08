@@ -21,7 +21,6 @@ import io.flutter.plugin.common.MethodCall
 import io.flutter.plugin.common.MethodChannel
 import io.flutter.plugin.platform.PlatformView
 import java.io.ByteArrayOutputStream
-import java.lang.NullPointerException
 import java.util.concurrent.LinkedBlockingQueue
 import java.util.concurrent.ThreadPoolExecutor
 import java.util.concurrent.TimeUnit
@@ -80,7 +79,7 @@ class JyFaceCompareView(private val context: Context, private val aliveDetect: A
         mCamera = initCamera(previewWidth, previewHeight, rotate)
         Log.i(TAG, "current device MODEL:${Build.MODEL}")
         when(Build.MODEL){
-            in setOf(DEVICE_MODEL_Z10S,DEVICE_MODEL_Z20,DEVICE_MODEL_M70) -> {
+            in setOf(DEVICE_MODEL_Z10S,DEVICE_MODEL_Z20) -> {
                 minLeftPx = 190
                 maxRightPx = 410
                 minTopPx = 10
@@ -96,22 +95,22 @@ class JyFaceCompareView(private val context: Context, private val aliveDetect: A
                 pictureWidth = 480
                 pictureHeight = 640
             }
-            /*DEVICE_MODEL_Z20 -> {
-                minLeftPx = 190
-                maxRightPx = 410
+            DEVICE_MODEL_Z20 -> {
+                minLeftPx = 130
+                maxRightPx = 420
                 minTopPx = 10
-                maxBottomPx = 300
-                pictureWidth = 240
-                pictureHeight = 320
+                maxBottomPx = 390
+                pictureWidth = 300
+                pictureHeight = 400
             }
             DEVICE_MODEL_M70 -> {
-                minLeftPx = 190
-                maxRightPx = 410
+                minLeftPx = 130
+                maxRightPx = 420
                 minTopPx = 10
-                maxBottomPx = 300
-                pictureWidth = 240
-                pictureHeight = 320
-            }*/
+                maxBottomPx = 390
+                pictureWidth = 300
+                pictureHeight = 400
+            }
             else -> {
                 Log.w(TAG, "未适配的设备类型:${Build.MODEL}")
                 minLeftPx = 190
@@ -241,7 +240,7 @@ class JyFaceCompareView(private val context: Context, private val aliveDetect: A
                 if (similar >= threshold){
                     mCompareStart = false
                     playSound(R.raw.face_verified, 1500)
-                    val cropBitmap = Bitmap.createBitmap(bitmap, minLeftPx, 0, pictureWidth, pictureHeight)
+                    val cropBitmap = Bitmap.createBitmap(bitmap, minLeftPx - 10, 0, pictureWidth, pictureHeight)
                     val outputStream = ByteArrayOutputStream()
                     cropBitmap.compress(Bitmap.CompressFormat.JPEG, 100, outputStream)
                     fireCompareResult(result = true, msg = "人脸比对已通过，请您保持两秒不要移动", similar = similar, bitmap = outputStream.toByteArray())
