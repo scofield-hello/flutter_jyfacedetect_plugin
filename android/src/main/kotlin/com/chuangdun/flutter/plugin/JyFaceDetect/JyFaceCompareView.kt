@@ -4,7 +4,7 @@ import android.content.Context
 import android.graphics.Bitmap
 import android.graphics.BitmapFactory
 import android.media.MediaPlayer
-import android.os.Environment
+import android.os.Build
 import android.os.Handler
 import android.util.Log
 import android.view.TextureView
@@ -21,7 +21,7 @@ import io.flutter.plugin.common.MethodCall
 import io.flutter.plugin.common.MethodChannel
 import io.flutter.plugin.platform.PlatformView
 import java.io.ByteArrayOutputStream
-import java.io.File
+import java.lang.NullPointerException
 import java.util.concurrent.LinkedBlockingQueue
 import java.util.concurrent.ThreadPoolExecutor
 import java.util.concurrent.TimeUnit
@@ -34,6 +34,14 @@ private const val EVENT_CAMERA_CLOSED = 3
 private const val EVENT_COMPARE_START = 4
 private const val EVENT_COMPARE_RESULT = 5
 private const val TAG = "JyFaceCompareView"
+//柜机
+private const val DEVICE_MODEL_Z10S = "Z10S"
+//大屏双面屏
+private const val DEVICE_MODEL_Z21 = "Z21"
+//小屏幕双面屏
+private const val DEVICE_MODEL_Z20 = "Z20"
+//平板
+private const val DEVICE_MODEL_M70 = "M70"
 
 class JyFaceCompareView(private val context: Context, private val aliveDetect: AliveDetect, messenger: BinaryMessenger, id: Int, createParams: Map<*, *>) : PlatformView,
         MethodChannel.MethodCallHandler, EventChannel.StreamHandler{
@@ -52,6 +60,12 @@ class JyFaceCompareView(private val context: Context, private val aliveDetect: A
     private var mCompareStart = false
     private val width:Int
     private val height:Int
+    private val minLeftPx:Int
+    private val maxRightPx:Int
+    private val minTopPx:Int
+    private val maxBottomPx:Int
+    private val pictureWidth:Int
+    private val pictureHeight:Int
     init {
         val widthAsDP = (createParams["width"] as Int)
         width = dp2px(context, widthAsDP.toFloat())
@@ -64,6 +78,50 @@ class JyFaceCompareView(private val context: Context, private val aliveDetect: A
         methodChannel.setMethodCallHandler(this)
         eventChannel.setStreamHandler(this)
         mCamera = initCamera(previewWidth, previewHeight, rotate)
+        Log.i(TAG, "current device MODEL:${Build.MODEL}")
+        when(Build.MODEL){
+            in setOf(DEVICE_MODEL_Z10S,DEVICE_MODEL_Z20,DEVICE_MODEL_M70) -> {
+                minLeftPx = 190
+                maxRightPx = 410
+                minTopPx = 10
+                maxBottomPx = 300
+                pictureWidth = 240
+                pictureHeight = 320
+            }
+            DEVICE_MODEL_Z21 -> {
+                minLeftPx = 210
+                maxRightPx = 650
+                minTopPx = 10
+                maxBottomPx = 600
+                pictureWidth = 480
+                pictureHeight = 640
+            }
+            /*DEVICE_MODEL_Z20 -> {
+                minLeftPx = 190
+                maxRightPx = 410
+                minTopPx = 10
+                maxBottomPx = 300
+                pictureWidth = 240
+                pictureHeight = 320
+            }
+            DEVICE_MODEL_M70 -> {
+                minLeftPx = 190
+                maxRightPx = 410
+                minTopPx = 10
+                maxBottomPx = 300
+                pictureWidth = 240
+                pictureHeight = 320
+            }*/
+            else -> {
+                Log.w(TAG, "未适配的设备类型:${Build.MODEL}")
+                minLeftPx = 190
+                maxRightPx = 410
+                minTopPx = 10
+                maxBottomPx = 300
+                pictureWidth = 240
+                pictureHeight = 320
+            }
+        }
     }
 
     private fun initCamera(previewWidth: Int, previewHeight: Int, rotate: Int):JYCamera{
@@ -72,7 +130,7 @@ class JyFaceCompareView(private val context: Context, private val aliveDetect: A
                 .setCameraPreviewSize(previewWidth, previewHeight)
                 .setCameraPictureSize(previewWidth, previewHeight)
                 .setCameraRotation(rotate)
-                .mirror()
+                //.mirror()
                 .setCameraCallback(object : CameraCallback {
                     override fun onOpenedCamera() {
                         Log.d(TAG, "Camera opened.")
@@ -136,7 +194,7 @@ class JyFaceCompareView(private val context: Context, private val aliveDetect: A
                 }catch (e: InterruptedException){
                     Log.e(TAG, "线程睡眠200毫秒失败.")
                 }
-                val bitmap = mCamera.takePicture()
+                val bitmap: Bitmap = mCamera.takePicture() ?: continue
                 Log.d(TAG, "image size:${bitmap.width} * ${bitmap.height}")
                 val faceList = aliveDetect.detectFace(bitmap, null)
                 if (faceList == null || faceList.isEmpty()){
@@ -149,19 +207,32 @@ class JyFaceCompareView(private val context: Context, private val aliveDetect: A
                 }
                 val face = faceList[0]
                 Log.d(TAG, "face size:${face.right - face.left} * ${face.bottom - face.top}")
-                if (face.right - face.left < 120 || face.bottom - face.top < 120){
-                    fireCompareResult(result = false, msg = "人脸比对不通过，请您前进一小步")
+                if (face.right - face.left < 100 || face.bottom - face.top < 100){
+                    fireCompareResult(result = false, msg = "人脸区域太小，请您前进一小步")
                     continue
                 }
-                if (face.right - face.left > 440){
-                    fireCompareResult(result = false, msg = "人脸比对不通过，请您后退一小步")
+                if (face.left < minLeftPx){
+                    fireCompareResult(result = false, msg = "人脸需位于预览框中央，请向右移动一点${face.left}")
                     continue
                 }
-                if (face.left < 220 || (width - face.right) < 220 ||
+                if (face.right > maxRightPx){
+                    fireCompareResult(result = false, msg = "人脸需位于预览框中央，请向左移动一点${face.right}")
+                    continue
+                }
+                if (face.top < minTopPx ){
+                    fireCompareResult(result = false, msg = "人脸需位于预览框中央，请向后移动一点${face.top}")
+                    continue
+                }
+                if (face.bottom > maxBottomPx ){
+                    fireCompareResult(result = false, msg = "人脸需位于预览框中央，请向前移动一点${face.bottom}")
+                    continue
+                }
+                /*if (face.left < 220 || (width - face.right) < 220 ||
                         face.top < 20 || (height - face.bottom) < 20){
-                    fireCompareResult(result = false, msg = "人脸比对不通过，请将人脸处于预览框中央")
+                    //fireCompareResult(result = false, msg = "人脸比对不通过，请将人脸处于预览框中央")
+                    fireCompareResult(result = false, msg = "人脸比对不通过，${face.left} * ${width - face.right}")
                     continue
-                }
+                }*/
                 if (!face.isRightAngle()){
                     fireCompareResult(result = false, msg = "人脸比对不通过，请您平视并正对摄像头")
                     continue
@@ -170,7 +241,7 @@ class JyFaceCompareView(private val context: Context, private val aliveDetect: A
                 if (similar >= threshold){
                     mCompareStart = false
                     playSound(R.raw.face_verified, 1500)
-                    val cropBitmap = Bitmap.createBitmap(bitmap, 240, 0, 480, 640)
+                    val cropBitmap = Bitmap.createBitmap(bitmap, minLeftPx, 0, pictureWidth, pictureHeight)
                     val outputStream = ByteArrayOutputStream()
                     cropBitmap.compress(Bitmap.CompressFormat.JPEG, 100, outputStream)
                     fireCompareResult(result = true, msg = "人脸比对已通过，请您保持两秒不要移动", similar = similar, bitmap = outputStream.toByteArray())
@@ -181,6 +252,7 @@ class JyFaceCompareView(private val context: Context, private val aliveDetect: A
         }
         threadPool.execute(detectTask)
     }
+
 
     private fun fireCompareResult(result:Boolean, msg:String, similar:Int=0, bitmap:ByteArray?=null):Unit{
         uiHandler.post {  eventSink?.success(mapOf(
