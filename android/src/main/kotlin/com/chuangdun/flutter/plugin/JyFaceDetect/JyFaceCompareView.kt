@@ -79,7 +79,7 @@ class JyFaceCompareView(private val context: Context, private val aliveDetect: A
         mCamera = initCamera(previewWidth, previewHeight, rotate)
         Log.i(TAG, "current device MODEL:${Build.MODEL}")
         when(Build.MODEL){
-            in setOf(DEVICE_MODEL_Z10S,DEVICE_MODEL_Z20) -> {
+            in setOf(DEVICE_MODEL_Z10S) -> {
                 minLeftPx = 190
                 maxRightPx = 410
                 minTopPx = 10
