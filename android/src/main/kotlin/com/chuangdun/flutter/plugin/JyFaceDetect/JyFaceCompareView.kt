@@ -79,7 +79,7 @@ class JyFaceCompareView(private val context: Context, private val aliveDetect: A
         mCamera = initCamera(previewWidth, previewHeight, rotate)
         Log.i(TAG, "current device MODEL:${Build.MODEL}")
         when(Build.MODEL){
-            in setOf(DEVICE_MODEL_Z10S) -> {
+            DEVICE_MODEL_Z10S -> {
                 minLeftPx = 190
                 maxRightPx = 410
                 minTopPx = 10
@@ -226,12 +226,6 @@ class JyFaceCompareView(private val context: Context, private val aliveDetect: A
                     fireCompareResult(result = false, msg = "人脸需位于预览框中央，请向前移动一点${face.bottom}")
                     continue
                 }
-                /*if (face.left < 220 || (width - face.right) < 220 ||
-                        face.top < 20 || (height - face.bottom) < 20){
-                    //fireCompareResult(result = false, msg = "人脸比对不通过，请将人脸处于预览框中央")
-                    fireCompareResult(result = false, msg = "人脸比对不通过，${face.left} * ${width - face.right}")
-                    continue
-                }*/
                 if (!face.isRightAngle()){
                     fireCompareResult(result = false, msg = "人脸比对不通过，请您平视并正对摄像头")
                     continue
