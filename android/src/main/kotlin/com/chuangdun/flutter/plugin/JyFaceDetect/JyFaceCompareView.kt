@@ -211,19 +211,19 @@ class JyFaceCompareView(private val context: Context, private val aliveDetect: A
                     continue
                 }
                 if (face.left < minLeftPx){
-                    fireCompareResult(result = false, msg = "人脸需位于预览框中央，请向右移动一点${face.left}")
+                    fireCompareResult(result = false, msg = "人脸需位于预览框中央，请向右移动一点")
                     continue
                 }
                 if (face.right > maxRightPx){
-                    fireCompareResult(result = false, msg = "人脸需位于预览框中央，请向左移动一点${face.right}")
+                    fireCompareResult(result = false, msg = "人脸需位于预览框中央，请向左移动一点")
                     continue
                 }
                 if (face.top < minTopPx ){
-                    fireCompareResult(result = false, msg = "人脸需位于预览框中央，请向后移动一点${face.top}")
+                    fireCompareResult(result = false, msg = "人脸需位于预览框中央，请向后移动一点")
                     continue
                 }
                 if (face.bottom > maxBottomPx ){
-                    fireCompareResult(result = false, msg = "人脸需位于预览框中央，请向前移动一点${face.bottom}")
+                    fireCompareResult(result = false, msg = "人脸需位于预览框中央，请向前移动一点")
                     continue
                 }
                 if (!face.isRightAngle()){
