@@ -5,7 +5,6 @@ import android.graphics.Bitmap
 import android.media.MediaPlayer
 import android.os.Handler
 import android.util.Log
-import android.view.Gravity
 import android.view.TextureView
 import android.view.View
 import android.view.ViewGroup
@@ -161,17 +160,15 @@ class JyFaceDetectView(private val context: Context, private val aliveDetect: Al
                 val bitmap = mCamera.takePicture()
                 val blackBitmap = mBlackCamera.takePicture()
                 val reData = FloatArray(150 * 150 * 4)
-                val cmIdsFace = arrayOfNulls<CMIdsFace>(1)
-                when(val ret = aliveDetect.aliveDetect_InFloatWithPosition(bitmap, blackBitmap, cmIdsFace, reData)) {
-                    0 -> {
-                        if (cmIdsFace.size == 1){
-                            var faceInfo = cmIdsFace[0]!!
-                            Log.d(TAG, "face in top:${faceInfo.top}, right:${faceInfo.right}, " +
-                                    "bottom: ${faceInfo.bottom}, left: ${faceInfo.left}")
-                            Log.d(TAG, "face roll_angle:${faceInfo.roll_angle}, " +
-                                    "pitch_angle:${faceInfo.pitch_angle}, " +
-                                    "yaw_angle:${faceInfo.yaw_angle}")
-                            if (faceInfo.isRightAngle()){
+                val cmIdsFace = aliveDetect.detectFace(bitmap,null)
+                if (cmIdsFace != null && cmIdsFace.isNotEmpty()){
+                    Log.i(TAG, "检测到${cmIdsFace.size}张人脸.")
+                    if (cmIdsFace.size != 1){
+                        fireResultEvent(result = false, msg = "画面中不允许出现多张人脸")
+                    }else{
+                        when(val ret = aliveDetect.aliveDetect_InFloat(bitmap, blackBitmap,reData)) {
+                            0 -> {
+                                val faceInfo = cmIdsFace[0]!!
                                 mDetectStart = false
                                 playSound(R.raw.face_detected, 1500)
                                 val outputStream = ByteArrayOutputStream()
@@ -180,18 +177,14 @@ class JyFaceDetectView(private val context: Context, private val aliveDetect: Al
                                     msg = "已通过活体检测，正在识别中...",
                                     bitmap = outputStream.toByteArray(),
                                     face = faceInfo)
-                            }else{
-                                fireResultEvent(result = false, msg = "人脸偏斜，请您正对摄像头")
                             }
-                        }else{
-                            Log.i(TAG, "检测到${cmIdsFace.size}张人脸.")
-                            fireResultEvent(result = false, msg = "画面中不允许出现多张人脸")
+                            else ->{
+                                fireResultEvent(result = false, msg = "活体检测不通过，请重试(错误码:$ret)")
+                            }
                         }
                     }
-                    else ->{
-                        fireResultEvent(result = false, msg = "活体检测不通过，请重试(错误码:$ret)")
-                    }
                 }
+
             }
         }
         threadPool.execute(detectTask)
